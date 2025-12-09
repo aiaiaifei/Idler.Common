@@ -23,7 +23,7 @@ namespace Idler.Common.Core.Session
         /// <summary>
         /// 已认证
         /// </summary>
-        public override bool Authenticated => UserIdentifier.IsEmpty();
+        public override bool Authenticated => !UserIdentifier.IsEmpty();
 
         /// <summary>
         /// 用户身份Id
