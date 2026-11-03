@@ -9,6 +9,7 @@ internal static class TestCacheFactory
     public const string REDIS_ENVIRONMENT_VARIABLE = "IDLER_TEST_REDIS";
     public const string DEFAULT_SETTING = "Default";
     public const string EXPIRING_SETTING = "Expiring";
+    public const string ZERO_EXPIRES_SETTING = "ZeroExpires";
     public const int EXPIRES_TIME = 60;
 
     // FreeRedisService 的 RedisClient 是进程内静态单例，所有测试必须使用同一个连接串
@@ -34,7 +35,8 @@ internal static class TestCacheFactory
     public static IList<SimpleCacheSetting> DefaultSettings() => new List<SimpleCacheSetting>
     {
         new() { Key = DEFAULT_SETTING, ExpiresTime = -1 },
-        new() { Key = EXPIRING_SETTING, ExpiresTime = EXPIRES_TIME }
+        new() { Key = EXPIRING_SETTING, ExpiresTime = EXPIRES_TIME },
+        new() { Key = ZERO_EXPIRES_SETTING, ExpiresTime = 0 }
     };
 
     public static TestableCacheManager CreateManager(string settingKey = DEFAULT_SETTING, string prefix = "idler-test:")

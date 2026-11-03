@@ -362,7 +362,8 @@ namespace Idler.Common.Cache.FreeRedis
         /// 当缓存Key不存在时写入字符串值
         /// </summary>
         /// <remarks>
-        /// 缓存配置的过期时间大于零时同时设置过期时间
+        /// 缓存配置的过期时间大于零时，仅在缓存Key创建成功时设置过期时间
+        /// 缓存Key已存在时不修改值，也不刷新过期时间
         /// </remarks>
         /// <param name="key">缓存Key</param>
         /// <param name="value">字符串值</param>
@@ -386,7 +387,8 @@ namespace Idler.Common.Cache.FreeRedis
         /// 将缓存Key中的整数加一
         /// </summary>
         /// <remarks>
-        /// 缓存Key不存在时从零开始递增，缓存配置的过期时间大于零时同时设置过期时间
+        /// 缓存配置的过期时间大于零时，每次成功调用都会将过期时间重置为 ExpiresTime
+        /// 用于固定窗口计数时，窗口会随每次调用续期
         /// </remarks>
         /// <param name="key">缓存Key</param>
         /// <param name="region">分区</param>
@@ -413,7 +415,8 @@ namespace Idler.Common.Cache.FreeRedis
         /// 将缓存Key中的整数增加指定值
         /// </summary>
         /// <remarks>
-        /// 缓存Key不存在时从零开始递增，缓存配置的过期时间大于零时同时设置过期时间
+        /// 缓存配置的过期时间大于零时，每次成功调用都会将过期时间重置为 ExpiresTime
+        /// 用于固定窗口计数时，窗口会随每次调用续期
         /// </remarks>
         /// <param name="key">缓存Key</param>
         /// <param name="increment">增加的值，可为负数</param>

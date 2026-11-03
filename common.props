@@ -1,7 +1,7 @@
 <Project>
     <PropertyGroup>
         <LangVersion>latest</LangVersion>
-        <Version>0.3.0.1</Version>
+        <Version>0.3.0.7</Version>
         <PackageProjectUrl>https://space.bilibili.com/12002462/</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
@@ -12,4 +12,3 @@
         <Product>Idler.Common</Product>
     </PropertyGroup>
 </Project>
-  

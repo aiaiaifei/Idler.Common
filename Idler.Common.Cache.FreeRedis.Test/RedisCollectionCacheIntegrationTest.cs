@@ -14,10 +14,13 @@ public class RedisCollectionCacheIntegrationTest
 
     private TestableCacheManager manager = null!;
     private TestableCacheManager expiringManager = null!;
+    private TestableCacheManager zeroExpiresManager = null!;
     private IRedisCollectionCache<string> cache = null!;
     private IRedisCollectionCache<string> expiringCache = null!;
+    private IRedisCollectionCache<string> zeroExpiresCache = null!;
     private IRedisCommandCache<string> commandCache = null!;
     private IRedisCommandCache<string> expiringCommandCache = null!;
+    private IRedisCommandCache<string> zeroExpiresCommandCache = null!;
     private string region = null!;
 
     [TestInitialize]
@@ -29,10 +32,13 @@ public class RedisCollectionCacheIntegrationTest
         this.region = Guid.NewGuid().ToString("N");
         this.manager = TestCacheFactory.CreateManager(TestCacheFactory.DEFAULT_SETTING);
         this.expiringManager = TestCacheFactory.CreateManager(TestCacheFactory.EXPIRING_SETTING);
+        this.zeroExpiresManager = TestCacheFactory.CreateManager(TestCacheFactory.ZERO_EXPIRES_SETTING);
         this.cache = this.manager;
         this.expiringCache = this.expiringManager;
+        this.zeroExpiresCache = this.zeroExpiresManager;
         this.commandCache = this.manager;
         this.expiringCommandCache = this.expiringManager;
+        this.zeroExpiresCommandCache = this.zeroExpiresManager;
     }
 
     [TestCleanup]
@@ -177,6 +183,19 @@ public class RedisCollectionCacheIntegrationTest
     }
 
     [TestMethod]
+    public void SetNx_WithExpiresTime_DoesNotRefreshExistingTtl()
+    {
+        Assert.IsTrue(this.expiringCommandCache.SetNx("string-nx-existing", "0", this.region));
+        long ttlBefore = this.expiringManager.RedisClient.Ttl(this.expiringManager.CacheKey("string-nx-existing", this.region));
+
+        Thread.Sleep(1100);
+
+        Assert.IsFalse(this.expiringCommandCache.SetNx("string-nx-existing", "9", this.region));
+        long ttlAfter = this.expiringManager.RedisClient.Ttl(this.expiringManager.CacheKey("string-nx-existing", this.region));
+        Assert.IsTrue(ttlAfter < ttlBefore, $"ttlBefore={ttlBefore}, ttlAfter={ttlAfter}");
+    }
+
+    [TestMethod]
     public void SetNx_WithoutExpiresTime_DoesNotSetTtl()
     {
         Assert.IsTrue(this.commandCache.SetNx("string-nx-no-exp", "0", this.region));
@@ -200,6 +219,21 @@ public class RedisCollectionCacheIntegrationTest
 
         long ttl = this.expiringManager.RedisClient.Ttl(this.expiringManager.CacheKey("string-incr-one-with-exp", this.region));
         Assert.IsTrue(ttl > 0 && ttl <= TestCacheFactory.EXPIRES_TIME, $"ttl={ttl}");
+    }
+
+    [TestMethod]
+    public void Incr_WithExpiresTime_RefreshesTtl()
+    {
+        Assert.AreEqual(1, this.expiringCommandCache.Incr("string-incr-one-refresh", this.region));
+
+        Thread.Sleep(1100);
+
+        long ttlBeforeRefresh = this.expiringManager.RedisClient.Ttl(this.expiringManager.CacheKey("string-incr-one-refresh", this.region));
+        Assert.IsTrue(ttlBeforeRefresh < TestCacheFactory.EXPIRES_TIME, $"ttlBeforeRefresh={ttlBeforeRefresh}");
+
+        Assert.AreEqual(2, this.expiringCommandCache.Incr("string-incr-one-refresh", this.region));
+        long ttlAfterRefresh = this.expiringManager.RedisClient.Ttl(this.expiringManager.CacheKey("string-incr-one-refresh", this.region));
+        Assert.AreEqual(TestCacheFactory.EXPIRES_TIME, ttlAfterRefresh);
     }
 
     [TestMethod]
@@ -251,6 +285,30 @@ public class RedisCollectionCacheIntegrationTest
 
         long ttl = this.expiringManager.RedisClient.Ttl(this.expiringManager.CacheKey("string-incr-with-exp", this.region));
         Assert.IsTrue(ttl > 0 && ttl <= TestCacheFactory.EXPIRES_TIME, $"ttl={ttl}");
+    }
+
+    [TestMethod]
+    public void ExpiresTimeZero_DoesNotSetTtl()
+    {
+        Assert.IsTrue(this.zeroExpiresCommandCache.SetNx("string-nx-zero-exp", "0", this.region));
+        Assert.AreEqual(1, this.zeroExpiresCommandCache.Incr("string-incr-one-zero-exp", this.region));
+        Assert.AreEqual(5, this.zeroExpiresCommandCache.IncrBy("string-incr-zero-exp", 5, this.region));
+        Assert.AreEqual(1, this.zeroExpiresCache.SortedSetAdd(
+            "zset-batch-zero-exp",
+            new[] { (Score: 1m, Member: "a") },
+            this.region));
+
+        foreach (string key in new[]
+                 {
+                     "string-nx-zero-exp",
+                     "string-incr-one-zero-exp",
+                     "string-incr-zero-exp",
+                     "zset-batch-zero-exp"
+                 })
+        {
+            long ttl = this.zeroExpiresManager.RedisClient.Ttl(this.zeroExpiresManager.CacheKey(key, this.region));
+            Assert.AreEqual(-1, ttl, key);
+        }
     }
 
     [TestMethod]
